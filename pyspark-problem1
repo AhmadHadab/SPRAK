@@ -1,0 +1,31 @@
+## import csv to hdfs as avro format with compression
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" --username retail_dba --password cloudera --table orders --target-dir /user/cloudera/problem1/orders --as-avrodatafile --compress --compression-codec org.apache.hadoop.io.compress.SnappyCodec
+
+
+sqoop import --connect "jdbc:mysql://quickstart.cloudera:3306/retail_db" --username retail_dba --password cloudera --table order_items --target-dir /user/cloudera/problem1/order-items --as-avrodatafile --compress --compression-codec org.apache.hadoop.io.compress.SnappyCodec
+
+## load avro files as dataframe
+
+df1 = sqlContext.read.format("com.databricks.spark.avro").load("/user/cloudera/problem1/orders")
+df2 = sqlContext.read.format("com.databricks.spark.avro").load("/user/cloudera/problem1/order-items")
+
+joinedDF = df1.join(df2, df1.order_id==df2.order_item_order_id)
+
+import pyspark.sql.functions as f
+from pyspark.sql.functions import *
+
+joinedDF.groupby(date_format((col('order_date')/1000).cast("timestamp"),"yyyy-mm-dd HH:mm:ss").alias("DATE"), col('order_status')).agg(f.countDistinct('order_id').alias('count'), f.sum("order_item_subtotal").alias("Amount")).show()
+
+
+## RESULTS USING DATAFrames
+joinedDF.groupby(date_format((col('order_date')/1000).cast("timestamp"),"yyyy-mm-dd HH:mm:ss").alias("DATE"), col('order_status')).agg(f.countDistinct('order_id').alias('count'), round(f.sum("order_item_subtotal"),2).alias("Amount")).sort(desc("DATE"),"order_status", desc("Amount"),"count" ).show()
+
+
+## Results using sql context
+
+joinedDF.registerTempTable("ordersandItems")
+
+sqlResult = sqlContext.sql("select count(distinct (order_id)) as total_orders ,to_date(from_unixtime( order_date/1000))as order_date, order_status, round(sum(order_item_subtotal),2) as amount from ordersandItems  group by order_date, order_status order by order_date desc, order_status, amount desc, total_orders")
+
+sqlResult.show()
+
