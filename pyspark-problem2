@@ -1,0 +1,22 @@
+## load data from csv file to RDD
+
+products = sc.textFile("/user/cloudera/problem2/products").map(lambda a: (int(a.split("|")[0]), int(a.split("|")[1]),a.split("|")[2],a.split("|")[3],float(a.split("|")[4]), a.split("|")[5] ))
+
+schema = StructType([StructField("prodcutID", IntegerType()), StructField("prodcutCatID", IntegerType()), StructField("prodcutName", StringType()), StructField("prodcutDesc", StringType()), StructField("prodcutPrice", DoubleType()), StructField("prodcutImg", StringType())])
+
+productsDF = sqlContext.createDataFrame(products, schema)
+
+
+resultDF =productsDF.filter(productsDF.prodcutPrice<100).groupBy(productsDF.prodcutCatID).agg(min(productsDF.prodcutPrice).alias("min"), max(productsDF.prodcutPrice).alias("max"), countDistinct(productsDF.prodcutID).alias("Total Products"), round(avg(productsDF.prodcutPrice),2).alias("AVG") ).sort(productsDF.prodcutCatID)
+
+
+#### solution using spark sql:
+
+productsDF.registerTempTable("products_df")
+
+resultSqlDF= sqlContext.sql("select prodcutCatID, max(prodcutPrice) as max_price, min(prodcutPrice) as min_price, count(distinct prodcutID) as product_count, round(avg(prodcutPrice),2) as avg_price  from products_df where prodcutPrice < 100  group by prodcutCatID order by prodcutCatID ")
+
+
+## SAVE SOLTIUON AS AVRO file format 
+
+resultDF.write.format("com.databricks.spark.avro").save("/user/cloudera/problem2/products/result-df")
