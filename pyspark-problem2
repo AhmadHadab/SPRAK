@@ -1,4 +1,5 @@
-## load data from csv file to RDD
+
+### load data from csv file to RDD
 
 products = sc.textFile("/user/cloudera/problem2/products").map(lambda a: (int(a.split("|")[0]), int(a.split("|")[1]),a.split("|")[2],a.split("|")[3],float(a.split("|")[4]), a.split("|")[5] ))
 
