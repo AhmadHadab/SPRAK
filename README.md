@@ -22,5 +22,6 @@ requires skills and knoweldg working with the followin:
 ### Other reqruirments? 
 
 - better to download cloudera quick start virtual machine. It comes loaded with demo data and includes all required software. 
+- Spark 2.0
 
 
